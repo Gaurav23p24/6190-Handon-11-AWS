@@ -468,52 +468,11 @@ LIMIT 10;
 
 ---
 
-## 🎯 Implementation Steps
-
-### Step 1: S3 Bucket Setup
-1. Created bucket: `gaurav-handson11-6190`
-2. Created folders: `raw/` and `processed/`
-3. Uploaded CSV files to `raw/` folder
-4. Configured bucket for Athena query results
-
-### Step 2: IAM Role Configuration
-1. Created role: `sales-glue-crawler-role`
-2. Attached `AWSGlueServiceRole` policy
-3. Attached `AmazonS3FullAccess` policy
-4. Configured trust relationship for Glue service
-
-### Step 3: Glue Database & Crawlers
-1. Created database: `sales_analytics_db`
-2. Created crawler for Amazon Sale Report
-3. Created crawler for Sale Report
-4. Ran both crawlers successfully
-5. Verified tables in Data Catalog
-
-### Step 4: Athena Configuration
-1. Set query result location: `s3://gaurav-handson11-6190/processed/`
-2. Selected database: `sales_analytics_db`
-3. Verified table schemas
-4. Tested data retrieval with `SELECT COUNT(*)`
-
-### Step 5: Query Execution
-1. Executed Query 1 → Downloaded `query1_cumulative_sales.csv`
-2. Executed Query 2 → Downloaded `query2_geographic_hotspot.csv`
-3. Executed Query 3 → Downloaded `query3_fulfilment_impact.csv`
-4. Executed Query 4 → Downloaded `query4_top_products.csv`
-5. Executed Query 5 → Downloaded `query5_monthly_growth.csv`
-
----
-
 ## 📂 Repository Structure
 
 ```
 ├── README.md                           # This file
-├── queries/
-│   ├── query1_cumulative_sales.sql
-│   ├── query2_geographic_hotspot.sql
-│   ├── query3_fulfilment_impact.sql
-│   ├── query4_top_products.sql
-│   └── query5_monthly_growth.sql
+├── all_queries.txt
 ├── results/
 │   ├── query1_cumulative_sales.csv
 │   ├── query2_geographic_hotspot.csv
@@ -521,16 +480,14 @@ LIMIT 10;
 │   ├── query4_top_products.csv
 │   └── query5_monthly_growth.csv
 ├── screenshots/
-│   ├── 2_glue_permissions.png
-│   ├── 2_glue_relationship.png
-│   ├── 3_carwler_amazon_report.png
-│   ├── 3_carwler_sale_report.png
-│   ├── 4_schema1.png
-│   ├── 4_schema2.png
-│   └── s3_bucket_raw_inputs_2_csvs.png
-└── setup/
-    ├── create_amazon_table.sql
-    └── create_sale_report_table.sql
+   ├── 2_glue_permissions.png
+   ├── 2_glue_relationship.png
+   ├── 3_carwler_amazon_report.png
+   ├── 3_carwler_sale_report.png
+   ├── 4_schema1.png
+   ├── 4_schema2.png
+   └── s3_bucket_raw_inputs_2_csvs.png
+
 ```
 
 ---
