@@ -1,0 +1,284 @@
+================================================================================
+AWS ATHENA ANALYTICAL QUERIES - E-COMMERCE SALES DATA ANALYSIS
+ITCS 6190/8190 - Cloud Computing for Data Analysis
+Student: Gaurav Patel
+Database: sales_analytics_db
+Table: amazon_sale_report
+================================================================================
+
+================================================================================
+QUERY 1: Cumulative Sales Over Time for 2022
+================================================================================
+Description: This query calculates the running total of sales for each day 
+             of 2022 using window functions
+
+Business Question: What is the day-by-day cumulative sales trend for 2022?
+
+SQL Techniques Used:
+- Common Table Expression (CTE)
+- Date parsing with date_parse()
+- Window function: SUM() OVER (ORDER BY)
+- Year filtering
+
+Query:
+--------------------------------------------------------------------------------
+WITH daily_sales AS (
+    SELECT 
+        date_parse(date_col, '%m-%d-%y') as order_date,
+        SUM(amount) as daily_total
+    FROM amazon_sale_report
+    WHERE date_col IS NOT NULL 
+        AND amount IS NOT NULL
+        AND status != 'Cancelled'
+    GROUP BY date_parse(date_col, '%m-%d-%y')
+)
+SELECT 
+    order_date,
+    daily_total,
+    SUM(daily_total) OVER (ORDER BY order_date) as cumulative_sales
+FROM daily_sales
+WHERE YEAR(order_date) = 2022
+ORDER BY order_date
+LIMIT 10;
+--------------------------------------------------------------------------------
+
+Business Insights:
+- Track revenue momentum throughout the year
+- Identify growth acceleration or deceleration periods
+- Compare actual vs. projected cumulative targets
+- Seasonal trend analysis
+
+Result File: query1_cumulative_sales.csv
+
+================================================================================
+
+
+================================================================================
+QUERY 2: Geographic Hotspot Analysis for Low-Performing States
+================================================================================
+Description: This query identifies states with lowest average sales amount
+             and analyzes cancellation rates
+
+Business Question: Which states have the lowest average order values and 
+                  highest cancellation rates?
+
+SQL Techniques Used:
+- Multiple aggregations: COUNT(), SUM(), AVG()
+- Conditional aggregation: COUNT(CASE WHEN...)
+- Percentage calculations
+- State-level grouping
+
+Query:
+--------------------------------------------------------------------------------
+SELECT 
+    ship_state,
+    COUNT(DISTINCT order_id) as total_orders,
+    SUM(amount) as total_sales,
+    AVG(amount) as avg_order_value,
+    COUNT(CASE WHEN status = 'Cancelled' THEN 1 END) as cancelled_orders,
+    ROUND(100.0 * COUNT(CASE WHEN status = 'Cancelled' THEN 1 END) / COUNT(*), 2) as cancellation_rate
+FROM amazon_sale_report
+WHERE ship_state IS NOT NULL
+    AND amount IS NOT NULL
+GROUP BY ship_state
+ORDER BY avg_order_value ASC
+LIMIT 10;
+--------------------------------------------------------------------------------
+
+Business Insights:
+- Identify underperforming geographic markets
+- Target regions needing marketing intervention
+- Investigate high cancellation rate causes
+- Optimize logistics for problem areas
+
+Result File: query2_geographic_hotspot.csv
+
+================================================================================
+
+
+================================================================================
+QUERY 3: Impact of Fulfilment Type on Sales by Category
+================================================================================
+Description: This query analyzes how different fulfilment methods 
+             (Amazon vs Merchant) affect sales performance across categories
+
+Business Question: How do Amazon vs. Merchant fulfillment methods affect 
+                  sales performance across product categories?
+
+SQL Techniques Used:
+- Window function with PARTITION BY
+- Percentage contribution calculation
+- Multi-level grouping (category, fulfilment)
+- Cross-category comparison
+
+Query:
+--------------------------------------------------------------------------------
+SELECT 
+    category,
+    fulfilment,
+    COUNT(DISTINCT order_id) as order_count,
+    SUM(amount) as total_sales,
+    AVG(amount) as avg_order_value,
+    ROUND(100.0 * SUM(amount) / SUM(SUM(amount)) OVER (PARTITION BY category), 2) as sales_percentage_in_category
+FROM amazon_sale_report
+WHERE category IS NOT NULL
+    AND fulfilment IS NOT NULL
+    AND status != 'Cancelled'
+    AND amount IS NOT NULL
+GROUP BY category, fulfilment
+ORDER BY category, total_sales DESC
+LIMIT 10;
+--------------------------------------------------------------------------------
+
+Business Insights:
+- Compare FBA (Fulfilled by Amazon) vs. FBM (Fulfilled by Merchant)
+- Optimize fulfillment strategy per category
+- Identify categories where merchant fulfillment excels
+- Cost-benefit analysis of fulfillment methods
+
+Result File: query3_fulfilment_impact.csv
+
+================================================================================
+
+
+================================================================================
+QUERY 4: Top 3 Highest Revenue Products Within Each Category
+================================================================================
+Description: This query uses window functions to rank products in each 
+             category by total revenue
+
+Business Question: What are the top 3 revenue-generating SKUs in each 
+                  product category?
+
+SQL Techniques Used:
+- Window function: ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...)
+- Common Table Expression (CTE) for ranking
+- Rank filtering: WHERE revenue_rank <= 3
+- Category-level partitioning
+
+Query:
+--------------------------------------------------------------------------------
+WITH product_revenue AS (
+    SELECT 
+        category,
+        sku,
+        SUM(amount) as total_revenue,
+        COUNT(DISTINCT order_id) as order_count,
+        ROW_NUMBER() OVER (PARTITION BY category ORDER BY SUM(amount) DESC) as revenue_rank
+    FROM amazon_sale_report
+    WHERE category IS NOT NULL
+        AND sku IS NOT NULL
+        AND status != 'Cancelled'
+        AND amount IS NOT NULL
+    GROUP BY category, sku
+)
+SELECT 
+    category,
+    sku,
+    total_revenue,
+    order_count,
+    revenue_rank
+FROM product_revenue
+WHERE revenue_rank <= 3
+ORDER BY category, revenue_rank
+LIMIT 10;
+--------------------------------------------------------------------------------
+
+Business Insights:
+- Identify star products driving category revenue
+- Focus inventory management on top performers
+- Develop marketing strategies for winning products
+- Cross-sell and upsell opportunities
+
+Result File: query4_top_products.csv
+
+================================================================================
+
+
+================================================================================
+QUERY 5: Monthly Sales and Order Growth Analysis
+================================================================================
+Description: This query calculates total sales and orders for each month,
+             then uses window functions to determine month-over-month 
+             growth rates
+
+Business Question: What is the month-over-month growth rate for sales and 
+                  order volume?
+
+SQL Techniques Used:
+- Date truncation: DATE_TRUNC('month', ...)
+- Window function: LAG() OVER (ORDER BY month)
+- Growth rate calculation: (current - previous) / previous * 100
+- Time series analysis
+- Multiple CTEs
+
+Query:
+--------------------------------------------------------------------------------
+WITH monthly_metrics AS (
+    SELECT 
+        DATE_TRUNC('month', date_parse(date_col, '%m-%d-%y')) as month,
+        COUNT(DISTINCT order_id) as total_orders,
+        SUM(amount) as total_sales,
+        AVG(amount) as avg_order_value
+    FROM amazon_sale_report
+    WHERE date_col IS NOT NULL
+        AND amount IS NOT NULL
+        AND status != 'Cancelled'
+    GROUP BY DATE_TRUNC('month', date_parse(date_col, '%m-%d-%y'))
+)
+SELECT 
+    month,
+    total_orders,
+    total_sales,
+    ROUND(avg_order_value, 2) as avg_order_value,
+    LAG(total_sales) OVER (ORDER BY month) as prev_month_sales,
+    LAG(total_orders) OVER (ORDER BY month) as prev_month_orders,
+    ROUND(100.0 * (total_sales - LAG(total_sales) OVER (ORDER BY month)) / 
+          NULLIF(LAG(total_sales) OVER (ORDER BY month), 0), 2) as sales_growth_rate,
+    ROUND(100.0 * (total_orders - LAG(total_orders) OVER (ORDER BY month)) / 
+          NULLIF(LAG(total_orders) OVER (ORDER BY month), 0), 2) as order_growth_rate
+FROM monthly_metrics
+ORDER BY month
+LIMIT 10;
+--------------------------------------------------------------------------------
+
+Business Insights:
+- Track business momentum over time
+- Identify seasonal patterns
+- Forecast future performance
+- Detect growth acceleration or decline
+- Compare order volume vs. revenue growth
+
+Result File: query5_monthly_growth.csv
+
+================================================================================
+
+
+================================================================================
+SUMMARY OF ALL QUERIES
+================================================================================
+
+Query 1: Cumulative Sales - Running total analysis with window functions
+Query 2: Geographic Hotspot - State-level performance and cancellation analysis
+Query 3: Fulfilment Impact - Amazon vs Merchant fulfillment comparison by category
+Query 4: Top Products - Top 3 revenue products per category using ranking
+Query 5: Growth Analysis - Month-over-month sales and order growth rates
+
+Key SQL Concepts Demonstrated:
+✓ Common Table Expressions (CTEs)
+✓ Window Functions (SUM OVER, LAG, ROW_NUMBER, PARTITION BY)
+✓ Date Parsing and Manipulation
+✓ Conditional Aggregations
+✓ Growth Rate Calculations
+✓ Multiple-level Grouping
+✓ Ranking and Filtering
+
+All queries include LIMIT 10 as per assignment requirements.
+
+Database: sales_analytics_db
+Table: amazon_sale_report (24 columns, ~128K rows)
+Query Engine: Amazon Athena (Presto SQL)
+
+================================================================================
+END OF SQL QUERIES
+================================================================================
