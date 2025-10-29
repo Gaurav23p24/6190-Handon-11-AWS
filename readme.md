@@ -3,6 +3,7 @@
 ## ITCS 6190/8190 - Cloud Computing for Data Analysis
 **Hands-on L11: AWS Core Services (S3, Glue, CloudWatch, Athena)**  
 **Student:** Gaurav Patel  
+**Student ID:** 801426641
 **Semester:** Fall 2025
 
 ---
